@@ -10,11 +10,11 @@ A real-time ocean renderer written from scratch on WebGPU, with no engine or ren
 
 ## Run it
 
-Live at [ocean.chakky.dev](https://ocean.chakky.dev). An intro card explains the controls; the scene is already running behind it and one click starts flying.
+Live at [ocean.chakky.dev](https://ocean.chakky.dev). An intro card explains the controls; the scene is already running behind it and one click starts flying. Phones get the card only: the renderer stays off there, since it overheats them.
 
 You need a recent Chrome with WebGPU and a reasonably capable GPU. On a laptop, force Chrome onto the dedicated GPU in the Windows graphics settings, or it will fall back to the integrated one.
 
-Open `ocean.html` directly in the browser. `ocean.min.html` is the same page minified (65 KB instead of 104 KB). Both are self-contained and work from `file://`.
+Open `ocean.html` directly in the browser. `ocean.min.html` is the same page minified (63 KB instead of 103 KB). Both are self-contained and work from `file://`.
 
 To run from source:
 

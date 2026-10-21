@@ -3,9 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>web-ocean · real-time WebGPU sea</title>
-<meta name="description" content="A real-time ocean rendered from scratch in WebGPU: FFT waves, whitecaps and a physically based sunset sky.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0f14'/%3E%3Ccircle cx='16' cy='13' r='5' fill='%23f2b25c'/%3E%3Cpath d='M4 21c3-2 5-2 8 0s5 2 8 0 5-2 8 0v7H4z' fill='%232a7f8f'/%3E%3C/svg%3E">
+<title>web-ocean</title>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
@@ -19,33 +17,22 @@
   #panel input { width: 110px; accent-color: #e2a04e; }
   #panel output { text-align: right; font-variant-numeric: tabular-nums; opacity: .8; }
   #err { position: fixed; inset: 0; z-index: 20; display: none; padding: 40px; color: #f88; font: 16px system-ui; white-space: pre-wrap; background: #000; }
-  #intro { position: fixed; inset: 0; z-index: 10; display: flex; overflow-y: auto; padding: 20px;
-           background: rgba(5, 9, 14, .45); font: 15px/1.55 system-ui, sans-serif; color: #eef3f6;
-           transition: opacity 220ms cubic-bezier(.19, 1, .22, 1); }
+  #intro { position: fixed; inset: 0; z-index: 10; display: flex; overflow-y: auto; padding: 20px; background: #05090e73;
+           font: 15px/1.5 system-ui, sans-serif; color: #eef3f6; transition: opacity .22s cubic-bezier(.19, 1, .22, 1); }
   #intro.out { opacity: 0; pointer-events: none; }
-  body:has(#intro:not(.out)) #hud { opacity: 0; }
-  #intro .card { width: min(500px, 100%); margin: auto; padding: 28px; border-radius: 18px; background: rgba(12, 18, 24, .62);
-                 border: 1px solid rgba(255, 255, 255, .12); backdrop-filter: blur(16px) saturate(1.3);
-                 transition: transform 220ms cubic-bezier(.19, 1, .22, 1); }
-  #intro.out .card { transform: scale(.98); }
-  #intro .kicker { font: 12px ui-monospace, Menlo, monospace; color: #8a96a0; margin: 0 0 8px; }
-  #intro h1 { font-size: 36px; line-height: 1.08; letter-spacing: -.025em; margin: 0 0 12px; font-weight: 600; }
-  #intro .kb { color: #f2b25c; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  #intro .by { font-size: 13px; color: #d7dee3; margin: -8px 0 20px; }
-  #intro p { margin: 0 0 20px; color: #b9c4cc; }
-  #intro .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 13px; color: #b9c4cc; margin: 0 0 20px; }
-  #intro kbd { font: 12px ui-monospace, Menlo, monospace; padding: 2px 7px; border: 1px solid rgba(255, 255, 255, .25);
-               border-radius: 5px; color: #fff; }
-  #intro .gpu { font: 12px ui-monospace, Menlo, monospace; color: #7fd6b0; margin: 0 0 16px; }
-  #intro .gpu.no { color: #f5a3a3; }
-  #intro button { width: 100%; font: 600 15px system-ui, sans-serif; padding: 14px; border-radius: 12px; border: 0;
-                  background: #eef3f6; color: #0b0f14; cursor: pointer; transition: transform 150ms cubic-bezier(.25, .46, .45, .94); }
+  body:has(#intro) #hud { opacity: 0; }
+  #intro > div { max-width: 480px; margin: auto; padding: 28px; border-radius: 18px; background: #0c1218a0;
+                 border: 1px solid #fff2; backdrop-filter: blur(16px); }
+  #intro h1 { font-size: 36px; line-height: 1.1; letter-spacing: -.02em; margin: 0 0 12px; }
+  #intro b { color: #f2b25c; }
+  #intro p { margin: 0 0 16px; color: #b9c4cc; }
+  #intro p:empty { display: none; }
+  #intro #intro-gpu { color: #f2c27a; }
+  #intro kbd { font: 12px monospace; padding: 1px 6px; border: 1px solid #fff4; border-radius: 5px; color: #fff; }
+  #intro button { width: 100%; font: 600 15px system-ui; padding: 14px; border: 0; border-radius: 12px; background: #eef3f6; cursor: pointer; }
   #intro button:active { transform: scale(.97); }
-  #intro button:disabled { opacity: .45; cursor: not-allowed; }
-  #intro .foot { margin-top: 16px; font-size: 12px; color: #8a96a0; text-align: center; }
-  #intro .foot a { color: #b9c4cc; }
-  @media (prefers-reduced-motion: reduce) { #intro .card, #intro button { transition: none; } #intro.out .card { transform: none; } }
-  @media (prefers-reduced-transparency: reduce) { #intro .card { background: #0c1218; backdrop-filter: none; } }
+  #intro small { display: block; margin-top: 14px; color: #8a96a0; text-align: center; }
+  #intro a { color: inherit; }
 </style>
 </head>
 <body>
@@ -56,41 +43,32 @@
 </div>
 <div id="panel" class="hidden"></div>
 <div id="err"></div>
-<div id="intro" role="dialog" aria-labelledby="intro-title">
-  <div class="card">
-    <div class="kicker">web-ocean</div>
-    <h1 id="intro-title">A whole ocean in <span class="kb"><span id="intro-kb">104</span> KB</span></h1>
-    <p>This page is one HTML file. No engine, no libraries, no textures, no images: the waves, the foam, the sunset sky and the clouds are computed live on your GPU with WebGPU. It is already running behind this card.</p>
-    <div class="by">Written end to end by Claude Opus 5.5 in Claude Code</div>
-    <div class="keys">
-      <span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></span><span>move</span>
-      <span><kbd>Mouse</kbd></span><span>look around (Esc releases it)</span>
-      <span><kbd>Shift</kbd></span><span>5x speed</span>
-      <span><kbd>H</kbd></span><span>settings: wind, swell, sun, clouds</span>
-    </div>
-    <div class="gpu" id="intro-gpu">✓ WebGPU available</div>
-    <button id="intro-go" type="button">Click to dive in</button>
-    <div class="foot">Best on desktop Chrome with a dedicated GPU · <a href="https://github.com/chakkyy/web-ocean">Source on GitHub</a></div>
-  </div>
-</div>
+<div id="intro"><div>
+  <h1>A whole ocean in <b><span id="intro-kb">103</span> KB</b></h1>
+  <p>One HTML file. No engine, no libraries, no textures: the waves, foam, sky and clouds are computed live on your GPU with WebGPU. Written end to end by Claude Opus 5.5.</p>
+  <p><kbd>WASD</kbd> move · <kbd>Mouse</kbd> look · <kbd>Shift</kbd> fast · <kbd>H</kbd> settings</p>
+  <p id="intro-gpu"></p>
+  <button id="intro-go">Dive in</button>
+  <small>Best on desktop Chrome · <a href="https://github.com/chakkyy/web-ocean">Source</a></small>
+</div></div>
 <script>
   (() => {
     const intro = document.getElementById('intro');
     const q = new URLSearchParams(location.search);
-    if (q.get('ui') === '0' || q.has('shot') || q.get('intro') === '0') { intro.remove(); return; }
-    const go = document.getElementById('intro-go');
-    if (!navigator.gpu) {
-      const gpu = document.getElementById('intro-gpu');
-      gpu.textContent = '✗ This browser has no WebGPU. Try a recent desktop Chrome or Edge.';
-      gpu.classList.add('no');
-      go.disabled = true;
-      return;
+    if (q.get('ui') === '0' || q.has('shot') || q.get('intro') === '0') return intro.remove();
+    const gpu = document.getElementById('intro-gpu'), go = document.getElementById('intro-go');
+    const off = (msg) => { window.oceanOff = 1; gpu.textContent = msg; go.remove(); };
+    if (matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches) {
+      off('Desktop only: on a phone it overheats or closes the tab. Open it on a computer.');
+    } else if (!navigator.gpu) {
+      off('This browser has no WebGPU. Try a recent desktop Chrome or Edge.');
+    } else {
+      go.onclick = () => {
+        intro.classList.add('out');
+        document.getElementById('c').requestPointerLock?.()?.catch?.(() => {});
+        setTimeout(() => intro.remove(), 260);
+      };
     }
-    go.addEventListener('click', () => {
-      intro.classList.add('out');
-      document.getElementById('c').requestPointerLock?.()?.catch?.(() => {});
-      setTimeout(() => intro.remove(), 260);
-    });
   })();
 </script>
 <script type="module">
@@ -1682,6 +1660,8 @@ function mat4Mul(out, a, b) {
 }
 
 async function main() {
+  // phones overheat or drop the tab, so the intro card turns the renderer off there
+  if (window.oceanOff) return;
   if (!navigator.gpu) fail('WebGPU is not available in this browser.');
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) fail('No WebGPU adapter found.');

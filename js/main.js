@@ -64,6 +64,8 @@ function mat4Mul(out, a, b) {
 }
 
 async function main() {
+  // phones overheat or drop the tab, so the intro card turns the renderer off there
+  if (window.oceanOff) return;
   if (!navigator.gpu) fail('WebGPU is not available in this browser.');
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) fail('No WebGPU adapter found.');

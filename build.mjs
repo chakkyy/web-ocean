@@ -78,6 +78,7 @@ if (esbuild) {
 
 const minPage = page
   .replace(SCRIPT_TAG, () => `<script type="module">${minJs}</script>`)
+  .replace(/<script>([\s\S]*?)<\/script>/, (_, js) => `<script>${esbuild ? esbuild.transformSync(js, { minify: true }).code.trim() : js}</script>`)
   .replace(/<style>([\s\S]*?)<\/style>/, (_, css) => `<style>${css.replace(/\s+/g, ' ').replace(/ ?([{}:;,>]) ?/g, '$1').trim()}</style>`)
   .replace(/>\s+</g, '><');
 // the intro card states the size of this page; write the real number in both bundles
